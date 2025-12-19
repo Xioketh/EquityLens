@@ -46,52 +46,53 @@ class GeminiService:
             raise
 
     def analyze_report(self, pdf_path: str) -> FinancialExtract:
-        """
-        Main orchestration method: Upload -> Extract -> Parse -> Cleanup
-        """
-        file_ref = None
-        try:
-            # 1. Upload
-            file_ref = self._upload_to_gemini(pdf_path)
+            file_ref = None
+            try:
+                # 1. Upload
+                file_ref = self._upload_to_gemini(pdf_path)
 
-            # 2. Construct Domain-Specific Prompt
-            # Explicitly asking for 'Group' figures handles the Conglomerate issue.
-            prompt = """
-            Act as a Senior Financial Analyst for the Colombo Stock Exchange. 
-            Analyze this Interim Financial Report.
+                # 2. Construct Domain-Specific Prompt
+                prompt = """
+                Act as a Senior Financial Analyst for the Colombo Stock Exchange. 
+                Analyze this Interim Financial Report.
+                
+                CRITICAL INSTRUCTIONS:
+                1. Extract the 'Group' (Consolidated) figures, NOT 'Company' figures.
+                2. Look for the "Number of Shares in Issue" usually found in the notes or "Stated Capital" section.
+                3. If figures are in thousands ('000), MULTIPLY them by 1,000 to return the absolute LKR value.
+                4. If a value is represented in brackets (e.g., (500)), it is negative.
+                
+                PAGE CITATIONS:
+                For every numerical value extracted (Net Profit, Equity, Shares, Dividends), you MUST identify the PDF page number where you found this specific figure. 
+                Populate the corresponding '_page' fields in the JSON.
+                
+                Return PURE JSON matching the schema.
+                """
+
+                # 3. Generate Content
+                response = self.model.generate_content(
+                    [file_ref, prompt],
+                    safety_settings={
+                        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                    }
+                )
+
+                # 4. Parse & Validate
+                # The SDK with `response_schema` usually returns a Python object directly if accessed via simple JSON parsing
+                # specific to the schema, but explicit validation is safer.
+                print(response.text)
+                json_data = json.loads(response.text)
+                validated_data = FinancialExtract(**json_data)
+                
+                return validated_data
+
+            except Exception as e:
+                logger.error(f"Analysis failed: {e}")
+                # Re-raise to let the UI know something went wrong
+                raise e
             
-            CRITICAL INSTRUCTIONS:
-            1. Extract the 'Group' (Consolidated) figures, NOT 'Company' figures.
-            2. Look for the "Number of Shares in Issue" usually found in the notes or "Stated Capital" section.
-            3. If figures are in thousands ('000), MULTIPLY them by 1,000 to return the absolute LKR value.
-            4. If a value is represented in brackets (e.g., (500)), it is negative.
-            5. Return PURE JSON matching the schema.
-            """
-
-            # 3. Generate Content
-            response = self.model.generate_content(
-                [file_ref, prompt],
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
-            )
-
-            # 4. Parse & Validate
-            # The SDK with `response_schema` usually returns a Python object directly if accessed via simple JSON parsing
-            # specific to the schema, but explicit validation is safer.
-            print(response.text)
-            json_data = json.loads(response.text)
-            validated_data = FinancialExtract(**json_data)
-            
-            return validated_data
-
-        except Exception as e:
-            logger.error(f"Analysis failed: {e}")
-            # Re-raise to let the UI know something went wrong
-            raise e
-        
-        finally:
-            # 5. Cleanup (Crucial for Privacy & Storage Limits)
-            if file_ref:
-                logger.info(f"Deleting file {file_ref.name} from Gemini storage.")
-                genai.delete_file(file_ref.name)
+            finally:
+                # 5. Cleanup (Crucial for Privacy & Storage Limits)
+                if file_ref:
+                    logger.info(f"Deleting file {file_ref.name} from Gemini storage.")
+                    genai.delete_file(file_ref.name)

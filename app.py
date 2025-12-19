@@ -60,7 +60,7 @@ def main():
             
             # Show the "Analyze" button only if we haven't analyzed this file yet
             if st.button("🚀 Analyze Report with AI", type="primary"):
-                with st.spinner("Gemini 1.5 is scanning the financial statements..."):
+                with st.spinner("Scanning the financial statements..."):
                     try:
                         # Pass the env key to the service
                         service = GeminiService(api_key=api_key)
@@ -83,38 +83,77 @@ def main():
         if 'extracted_data' in st.session_state:
             st.divider()
             
-            # Using a container for the verification section to make it pop
             with st.container(border=True):
                 st.subheader("🧐 Verify Extracted Data")
                 st.caption("AI extraction is ~95% accurate. Please review figures against the PDF before calculating.")
 
                 with st.form("verification_form"):
                     data = st.session_state['extracted_data']
-                    st.markdown(data.company_name)
+                    st.markdown(f"### {data.company_name}")
+
+                    # Helper to format labels with page numbers
+                    def get_label(name, page):
+                        if page:
+                            return f"{name}  (📄 Page {page})"
+                        return f"{name}  (⚠️ Page Unknown)"
 
                     # Layout: 2 Columns
                     c1, c2 = st.columns(2)
+                    
                     with c1:
                         st.markdown("**Income Statement**")
-                        net_profit = st.number_input("Net Profit (LKR)", value=float(data.net_profit), format="%f")
-                        dividends = st.number_input("Dividend Paid (LKR)", value=float(data.dividend_paid or 0), format="%f")
+                        
+                        # Net Profit
+                        net_profit = st.number_input(
+                            get_label("Net Profit (LKR)", data.net_profit_page),
+                            value=float(data.net_profit), 
+                            format="%f"
+                        )
+                        
+                        # Dividends
+                        dividends = st.number_input(
+                            get_label("Dividend Paid (LKR)", data.dividend_paid_page),
+                            value=float(data.dividend_paid or 0), 
+                            format="%f"
+                        )
+                        
                     with c2:
                         st.markdown("**Balance Sheet**")
-                        total_equity = st.number_input("Total Equity (LKR)", value=float(data.total_equity), format="%f")
-                        shares = st.number_input("Shares Outstanding", value=int(data.shares_outstanding), step=1)
+                        
+                        # Total Equity
+                        total_equity = st.number_input(
+                            get_label("Total Equity (LKR)", data.total_equity_page),
+                            value=float(data.total_equity), 
+                            format="%f"
+                        )
+                        
+                        # Shares Outstanding (Integer)
+                        shares = st.number_input(
+                            get_label("Shares Outstanding", data.shares_outstanding_page),
+                            value=int(data.shares_outstanding), 
+                            step=1
+                        )
 
                     st.markdown("---")
                     submitted = st.form_submit_button("✅ Confirm & Calculate Ratios", use_container_width=True)
 
                     if submitted:
-                        # Update data object
+                        # Update data object (Preserving page numbers from original extraction)
                         updated_data = FinancialExtract(
                             company_name=data.company_name,
                             report_period_ending=data.report_period_ending,
+                            
+                            # Validated User Inputs
                             net_profit=net_profit,
                             total_equity=total_equity,
                             shares_outstanding=shares,
-                            dividend_paid=dividends
+                            dividend_paid=dividends,
+                            
+                            # Pass forward the page numbers (Hidden from user editing, but needed for schema)
+                            net_profit_page=data.net_profit_page,
+                            total_equity_page=data.total_equity_page,
+                            shares_outstanding_page=data.shares_outstanding_page,
+                            dividend_paid_page=data.dividend_paid_page
                         )
                         
                         # Calculate
