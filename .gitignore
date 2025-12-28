@@ -3,3 +3,5 @@ venv
 /venv
 .venv
 venv/
+.env
+src/models/__pycache__/schemas.cpython-311.pyc
