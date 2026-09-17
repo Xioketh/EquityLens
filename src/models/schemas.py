@@ -1,4 +1,5 @@
 # src/models/schemas.py
+from datetime import date
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
@@ -60,3 +61,21 @@ class InvestmentRatios(BaseModel):
     pbv_ratio: float
     roe_percent: float
     dividend_yield_percent: float
+
+
+class DividendRecord(BaseModel):
+    """
+    A single CASH DIVIDEND announcement from the CSE, parsed from the
+    approvedAnnouncement list entry + getAnnouncementById detail.
+    """
+    announcement_id: int
+    symbol: Optional[str] = None
+    company_name: str
+    dividend_type: str
+    voting_div_per_share: float = 0.0
+    non_voting_div_per_share: float = 0.0
+    financial_year: Optional[str] = None
+    date_of_announcement: Optional[date] = None
+    xd_date: Optional[date] = None
+    payment_date: Optional[date] = None
+    remarks: Optional[str] = None

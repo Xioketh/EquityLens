@@ -2,3 +2,6 @@ google-generativeai
 pydantic
 streamlit
 python-dotenv
+python-dateutil
+requests
+pandas
