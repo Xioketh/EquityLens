@@ -12,7 +12,7 @@ from src.models.schemas import FinancialExtract
 load_dotenv()
 
 # --- Page Config ---
-st.set_page_config(page_title="CSE Financial Analyzer", page_icon="📈", layout="wide")
+# st.set_page_config(page_title="CSE Financial Analyzer", page_icon="📈", layout="wide")
 
 def main():
     # --- API Key Validation ---
@@ -135,7 +135,7 @@ def main():
                         )
 
                     st.markdown("---")
-                    submitted = st.form_submit_button("✅ Confirm & Calculate Ratios", use_container_width=True)
+                    submitted = st.form_submit_button("✅ Confirm & Calculate Ratios", width="stretch")
 
                     if submitted:
                         # Update data object (Preserving page numbers from original extraction)

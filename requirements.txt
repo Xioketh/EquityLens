@@ -2,6 +2,6 @@ google-generativeai
 pydantic
 streamlit
 python-dotenv
-psycopg2-binary
-sqlalchemy
+python-dateutil
+requests
 pandas
